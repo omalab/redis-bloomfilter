@@ -18,7 +18,7 @@ class Redis
       end
 
       def insert(data)
-        set data, 1
+        set data
       end
 
       def include?(key)
@@ -48,8 +48,8 @@ class Redis
         @check_fnc_sha = @redis.script(:load, check_fnc)
       end
 
-      def set(data, val)
-        @redis.evalsha(@add_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data, val])
+      def set(data)
+        @redis.evalsha(@add_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data])
       end
     end
   end
