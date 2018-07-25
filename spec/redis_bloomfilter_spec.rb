@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'redis'
 require 'set'
 
 def test_error_rate(bf, elems)
@@ -80,6 +81,13 @@ describe Redis::Bloomfilter do
       bf.insert 'asdlolol'
       expect(bf.include?('asdlolol')).to be true
     end
+
+    it "should add ttl to the filter when requested (#{driver})" do
+      bf = factory({ size: 100, error_rate: 0.01, key_name: "__test_bf_#{driver}" }, driver)
+      bf.insert('asdlolol', 120)
+      expect(Redis.current.ttl("__test_bf_#{driver}#{driver == 'lua' ? ':1' : ''}")).to be > 0
+    end
+
   end
 
   it 'should be a scalable bloom filter' do
