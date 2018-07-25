@@ -15,8 +15,8 @@ class Redis
       end
 
       # Insert a new element
-      def insert(data)
-        set data, 1
+      def insert(data, expire)
+        set(data, expire)
       end
 
       # It checks if a key is part of the set
@@ -60,10 +60,12 @@ class Redis
         Digest::SHA1.hexdigest("#{i}-#{data}").to_i(16) % @options[:bits]
       end
 
-      def set(data, val)
-        @redis.pipelined do
-          indexes_for(data) { |i| @redis.setbit @options[:key_name], i, val }
+      def set(data, expire)
+        bits_changed = @redis.pipelined do
+          indexes_for(data) { |i| @redis.setbit @options[:key_name], i, 1 }
         end
+        found = !bits_changed.include?(0)
+        @redis.expire(@options[:key_name], expire) if !found && expire
       end
     end
   end
