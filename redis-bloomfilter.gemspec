@@ -5,10 +5,10 @@ $LOAD_PATH.push File.expand_path('lib', __dir__)
 require 'redis/bloomfilter/version'
 
 Gem::Specification.new do |s|
-  s.name        = 'redis-bloomfilter'
+  s.name        = 'amobee-redis-bloomfilter'
   s.version     = Redis::Bloomfilter::VERSION
-  s.authors     = ['Francesco Laurita']
-  s.email       = ['francesco.laurita@gmail.com']
+  s.authors     = ['Francesco Laurita', 'Ido Abramovich']
+  s.email       = ['francesco.laurita@gmail.com', 'ido.abramovich@amobee.com']
   s.homepage    = 'https://github.com/taganaka/redis-bloomfilter'
   s.summary     = 'Distributed Bloom Filter implementation on Redis'
   s.description = '
