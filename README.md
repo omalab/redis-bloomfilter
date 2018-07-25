@@ -35,13 +35,19 @@ require "redis-bloomfilter"
 # Key name on Redis: my-bloom-filter
 # Redis: 127.0.0.1:6379 or an already existing connection
 @bf = Redis::Bloomfilter.new(
-  :size => 10_000, 
-  :error_rate => 0.01, 
+  :size => 10_000,
+  :error_rate => 0.01,
   :key_name => 'my-bloom-filter'
 )
 
 # Insert an element
-@bf.insert "foo"
+existed_before = @bf.insert "foo"
+puts existed_before   # => false
+puts @bf.insert "foo" # => true
+
+# Insert an element without checking if already exists in the bloom filter
+@bf.insert! "baz"
+
 # Check if an element exists
 puts @bf.include?("foo") # => true
 puts @bf.include?("bar") # => false
@@ -52,16 +58,16 @@ puts @bf.include?("bar") # => false
 # Using Lua's driver: only available on Redis >= 2.6.0
 # This driver should be prefered because is faster
 @bf = Redis::Bloomfilter.new(
-  :size => 10_000, 
-  :error_rate => 0.01, 
+  :size => 10_000,
+  :error_rate => 0.01,
   :key_name   => 'my-bloom-filter-lua',
   :driver     => 'lua'
 )
 
 # Specify a redis connection:
 # @bf = Redis::Bloomfilter.new(
-#   :size => 10_000, 
-#   :error_rate => 0.01, 
+#   :size => 10_000,
+#   :error_rate => 0.01,
 #   :key_name   => 'my-bloom-filter-lua',
 #   :driver     => 'lua',
 #   :redis      => Redis.new(:host => "10.0.1.1", :port => 6380)
@@ -91,7 +97,7 @@ Lua code is taken from https://github.com/ErikDubbelboer/redis-lua-scaling-bloom
 
 Contributing to redis-bloomfilter
 ----------------
- 
+
 * Check out the latest master to make sure the feature hasn't been implemented or the bug hasn't been fixed yet.
 * Check out the issue tracker to make sure someone already hasn't requested it and/or contributed it.
 * Fork the project.

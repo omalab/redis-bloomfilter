@@ -16,6 +16,10 @@ class Redis
         set(data, expire)
       end
 
+      def insert!(data, expire = nil)
+        set(data, expire)
+      end
+
       # It checks if a key is part of the set
       def include?(key)
         indexes = []
@@ -40,15 +44,25 @@ class Redis
       # https://www.eecs.harvard.edu/~michaelm/postscripts/tr-02-05.pdf
       def indexes_for(data)
         sha = Digest::SHA1.hexdigest(data.to_s)
+        count_key = @options[:key_name] + ':count'
+        count = (@redis.get(count_key) || 0).to_i
+        count += 1
+
+        factor = ((@options[:size] + count) / @options[:size].to_f).ceil
+        index = (Math.log(factor).round(14) / 0.69314718055995).ceil
+        scale = (2**(index - 1)) * @options[:size]
+        bits = (-(scale * Math.log(@options[:error_rate] * 0.5**index).round(14)) / 0.4804530139182).floor
+        k = (0.69314718055995 * bits / scale).floor
         h = []
         h[0] = sha[0...8].to_i(16)
         h[1] = sha[8...16].to_i(16)
         h[2] = sha[16...24].to_i(16)
         h[3] = sha[24...32].to_i(16)
+
         idxs = []
 
-        (@options[:hashes]).times do |i|
-          v = (h[i % 2] + i * h[2 + (((i + (i % 2)) % 4) / 2)]) % @options[:bits]
+        k.times do |i|
+          v = (h[i % 2] + i * h[2 + (((i + (i % 2)) % 4) / 2.0)]) % bits
           idxs << v
         end
         idxs

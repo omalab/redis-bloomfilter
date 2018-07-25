@@ -57,9 +57,18 @@ class Redis
       h
     end
 
-    # Insert a new element
+    # Does a Check And Set, this will not add the element if it already exist.
+    # `insert` will return `false` if the element is added, or `true` if the element was already in the filter.
+    # Since we use a scaling filter adding an element using `insert!` might cause the element to exist in multiple parts of the filter at the same time.
+    # `insert` prevents this. Using only `insert` the :count key of the filter will accurately count the number of elements added to the filter.
+    # Only using `insert` will also lower the number of false positives by a small amount (less duplicates in the filter means less bits set).
     def insert(data, expire = nil)
       @driver.insert(data, expire || @options[:default_expire])
+    end
+
+    # Adds a new element to the filter. It will create the filter when it doesn't exist yet.
+    def insert!(data, expire = nil)
+      @driver.insert!(data, expire || @options[:default_expire])
     end
 
     # It checks if a key is part of the set

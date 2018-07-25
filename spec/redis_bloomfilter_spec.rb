@@ -97,4 +97,22 @@ describe Redis::Bloomfilter do
     expect(e).to be <= bf.options[:error_rate]
     bf.clear
   end
+
+  it 'should be interchangeable (lua -> ruby)' do
+    bf_lua = factory({ size: 100, error_rate: 0.01, key_name: '__test_bf' }, 'lua')
+    bf_ruby = factory({ size: 100, error_rate: 0.01, key_name: '__test_bf' }, 'ruby')
+    bf_lua.clear
+    bf_ruby.clear
+    bf_lua.insert "asdrofl"
+    expect(bf_ruby.include?('asdrofl')).to be true
+  end
+
+  it 'should be interchangeable (ruby -> lua)' do
+    bf_lua = factory({ size: 100, error_rate: 0.01, key_name: '__test_bf' }, 'lua')
+    bf_ruby = factory({ size: 100, error_rate: 0.01, key_name: '__test_bf' }, 'ruby')
+    bf_lua.clear
+    bf_ruby.clear
+    bf_ruby.insert "asdrofl"
+    expect(bf_lua.include?('asdrofl')).to be true
+  end
 end
