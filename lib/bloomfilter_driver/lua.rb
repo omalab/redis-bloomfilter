@@ -17,8 +17,8 @@ class Redis
         lua_load
       end
 
-      def insert(data)
-        set data
+      def insert(data, expire = nil)
+        set(data, expire)
       end
 
       def include?(key)
@@ -48,8 +48,8 @@ class Redis
         @check_fnc_sha = @redis.script(:load, check_fnc)
       end
 
-      def set(data)
-        @redis.evalsha(@add_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data])
+      def set(data, expire)
+        @redis.evalsha(@add_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data, expire])
       end
     end
   end

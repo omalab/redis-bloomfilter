@@ -13,6 +13,7 @@ class Redis
         error_rate: 0.01,
         key_name: 'redis-bloomfilter',
         hash_engine: 'md5',
+        default_expire: nil,
         redis: Redis.current,
         driver: nil
       }.merge options
@@ -57,8 +58,8 @@ class Redis
     end
 
     # Insert a new element
-    def insert(data)
-      @driver.insert data
+    def insert(data, expire = nil)
+      @driver.insert(data, expire || @options[:default_expire])
     end
 
     # It checks if a key is part of the set

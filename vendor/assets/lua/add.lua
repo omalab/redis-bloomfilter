@@ -1,6 +1,7 @@
 local entries   = ARGV[1]
 local precision = tonumber(ARGV[2])
 local hash      = redis.sha1hex(ARGV[3])
+local expire    = tonumber(ARGV[4])
 local countkey  = KEYS[1] .. ':count'
 local count     = redis.call('GET', countkey)
 if not count then
@@ -47,4 +48,5 @@ end
 if found == false then
   -- INCR is a little bit faster than SET.
   redis.call('INCR', countkey)
+  redis.call('EXPIRE', key, expire)
 end

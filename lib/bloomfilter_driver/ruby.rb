@@ -12,8 +12,8 @@ class Redis
       end
 
       # Insert a new element
-      def insert(data)
-        set data
+      def insert(data, expire = nil)
+        set(data, expire)
       end
 
       # It checks if a key is part of the set
@@ -54,10 +54,12 @@ class Redis
         idxs
       end
 
-      def set(key)
-        @redis.pipelined do
+      def set(key, expire)
+        bits_changed = @redis.pipelined do
           indexes_for(key).each { |i| @redis.setbit @options[:key_name], i, 1 }
         end
+        found = !bits_changed.include?(0)
+        @redis.expire(@options[:key_name], expire) if !found && expire
       end
     end
   end
