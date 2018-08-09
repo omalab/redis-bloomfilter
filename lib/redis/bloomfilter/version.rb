@@ -2,7 +2,7 @@
 
 class Redis
   class Bloomfilter
-    VERSION = '1.1.0'
+    VERSION = '1.1.1'
     def self.version
       "redis-bloomfilter version #{VERSION}"
     end
