@@ -14,15 +14,14 @@ class Redis
       def initialize(options = {})
         @options = options
         @redis = @options[:redis]
-        lua_load
       end
 
       def insert(data, expire = nil)
-        set(data, expire)
+        evalscript(:add, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data, expire])
       end
 
       def include?(key)
-        r = @redis.evalsha(@check_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], key])
+        r = evalscript(:check, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], key])
         r == 1
       end
 
@@ -32,24 +31,29 @@ class Redis
 
       protected
 
-      # It loads the script inside Redis
-      # Taken from https://github.com/ErikDubbelboer/redis-lua-scaling-bloom-filter
-      # This is a scalable implementation of BF. It means the initial size can vary
-      def lua_load
-        add_fnc = File.read File.expand_path("../../vendor/assets/lua/add.lua", __dir__)
-        check_fnc = File.read File.expand_path("../../vendor/assets/lua/check.lua", __dir__)
-
-        @add_fnc_sha   = Digest::SHA1.hexdigest(add_fnc)
-        @check_fnc_sha = Digest::SHA1.hexdigest(check_fnc)
-
-        loaded = @redis.script(:exists, [@add_fnc_sha, @check_fnc_sha]).uniq
-        return unless loaded.count != 1 || loaded.first != true
-        @add_fnc_sha   = @redis.script(:load, add_fnc)
-        @check_fnc_sha = @redis.script(:load, check_fnc)
+      def self.script_cache
+        @script_cache ||= Hash.new { |h, k| h[k] = Digest::SHA1.hexdigest(Lua.get_script(k)) }
+        @script_cache
       end
 
-      def set(data, expire)
-        @redis.evalsha(@add_fnc_sha, keys: [@options[:key_name]], argv: [@options[:size], @options[:error_rate], data, expire])
+      def self.get_script(script)
+        File.read File.expand_path("../../vendor/assets/lua/#{script}.lua", __dir__)
+      end
+
+      # Optimistically tries to send `evalsha` to the server, if a NOSCRIPT error occurs,
+      # loads the script to the redis server and tries again.
+      # The scripts are taken from https://github.com/ErikDubbelboer/redis-lua-scaling-bloom-filter
+      # This is a scalable implementation of BF. It means the initial size can vary
+      def evalscript(script, keys:, argv:)
+        begin
+          @redis.evalsha(Lua.script_cache[script], keys: keys, argv: argv)
+        rescue Redis::CommandError => e
+          if e.message =~ /^NOSCRIPT/
+            @redis.script(:load, Lua.get_script(script))
+            retry
+          end
+          raise
+        end
       end
     end
   end
