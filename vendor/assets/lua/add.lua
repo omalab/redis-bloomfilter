@@ -48,5 +48,7 @@ end
 if found == false then
   -- INCR is a little bit faster than SET.
   redis.call('INCR', countkey)
-  redis.call('EXPIRE', key, expire)
+  if expire then
+    redis.call('EXPIRE', key, expire)
+  end
 end
