@@ -22,6 +22,9 @@ def factory(options, driver)
 end
 
 describe Redis::Bloomfilter do
+
+  let(:redis_url) { "redis://localhost:6379" }
+
   it 'should return the right version' do
     expect(Redis::Bloomfilter.version).to eq "redis-bloomfilter version #{Redis::Bloomfilter::VERSION}"
   end
@@ -36,7 +39,6 @@ describe Redis::Bloomfilter do
   it 'should choose the right driver based on the Redis version' do
     redis_mock = flexmock('redis')
     redis_mock.should_receive(:info).and_return({ 'redis_version' => '2.6.0' })
-    redis_mock.should_receive(:script).and_return([true, true])
     redis_mock_2_5 = flexmock('redis_2_5')
     redis_mock_2_5.should_receive(:info).and_return({ 'redis_version' => '2.5.0' })
 
@@ -55,6 +57,33 @@ describe Redis::Bloomfilter do
     expect(bf.options[:hashes]).to eq 6
     expect(bf.options[:key_name]).to eq 'ossom'
     bf.clear
+  end
+
+  it 'should load the lua script when not exists' do
+    redis = Redis.new(url: redis_url)
+    redis.script(:flush)
+    redis_mock = flexmock(redis)
+    redis_mock.should_receive(:evalsha).with(String, Hash).once.and_raise(Redis::CommandError.new("NOSCRIPT No matching script. Please use EVAL.")).pass_thru
+    redis_mock.should_receive(:script).with(:load, String).once.pass_thru
+    redis_mock.should_receive(:evalsha).once.pass_thru
+    bf = factory({ size: 1000, error_rate: 0.01, key_name: 'osson', redis: redis_mock }, nil)
+    bf.insert "blah"
+    redis_mock.should_receive(:evalsha).once.pass_thru
+    bf.insert "blue"
+    redis_mock.should_receive(:evalsha).with(String, Hash).once.and_raise(Redis::CommandError.new("NOSCRIPT No matching script. Please use EVAL.")).pass_thru
+    redis_mock.should_receive(:script).with(:load, String).once.pass_thru
+    redis_mock.should_receive(:evalsha).once.pass_thru
+    expect(bf.include?("blah")).to be true
+  end
+
+  it 'should not load the lua script when already loaded' do
+    redis = Redis.new(url: redis_url)
+    redis.script(:flush)
+    redis.script(:load, Redis::BloomfilterDriver::Lua.get_script(:add))
+    redis_mock = flexmock(redis)
+    redis_mock.should_receive(:evalsha).once.pass_thru
+    bf = factory({ size: 1000, error_rate: 0.01, key_name: 'osson', redis: redis_mock }, nil)
+    bf.insert "blah"
   end
 
   %w[ruby lua ruby-test].each do |driver|
